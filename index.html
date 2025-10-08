@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación de Ecuaciones Diferenciales</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #romantic-message {
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+        #romantic-message.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-3xl mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+        <header class="text-center mb-6">
+            <h1 id="title" class="text-3xl md:text-4xl font-bold text-cyan-400 transition-colors duration-500">Simulación de Ecuaciones Diferenciales</h1>
+            <p id="subtitle" class="text-gray-400 mt-2">Modelando un sistema dinámico a lo largo del tiempo.</p>
+        </header>
+
+        <div id="canvas-container" class="w-full aspect-square bg-gray-900 rounded-xl overflow-hidden border-2 border-gray-700 relative">
+             <!-- El canvas de p5.js se insertará aquí -->
+        </div>
+        
+        <div class="flex justify-center my-6">
+            <button id="startBtn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-cyan-300 transition-colors duration-500">
+                Iniciar Simulación
+            </button>
+        </div>
+
+        <div id="romantic-message" class="text-center mt-4 p-4 rounded-lg bg-gray-700/50">
+            <p class="text-lg italic text-pink-300">"El crecimiento de mis sentimientos por ti en función del tiempo."</p>
+        </div>
+    </div>
+
+    <footer class="text-center text-gray-500 mt-8 text-sm">
+        <p>Creado con p5.js y ecuaciones diferenciales.</p>
+    </footer>
+
+    <script>
+        let sketch = function(p) {
+            const SIM_STATE = {
+                IDLE: 'idle',
+                PHASE_1_POP: 'population',
+                PHASE_1_DONE: 'population_done',
+                PHASE_2_COOL: 'cooling',
+                PHASE_2_DONE: 'cooling_done',
+                PHASE_3_HEART: 'heart',
+                FINISHED: 'finished'
+            };
+            let currentState = SIM_STATE.IDLE;
+            
+            let points_pop = [], t_pop = 0, pop_speed = 0.1, t_pop_max = 10;
+            let points_cool = [], t_cool = 0, cool_speed = 0.1, t_cool_max = 10;
+            let points_heart = [], t_heart = 0, heart_speed = 0.035, scale_heart;
+            
+            const startBtn = document.getElementById('startBtn');
+            const messageEl = document.getElementById('romantic-message');
+            const subtitleEl = document.getElementById('subtitle');
+            const titleEl = document.getElementById('title');
+
+            function changeTheme(theme) {
+                const themes = {
+                    'serious': { title: 'text-cyan-400', btn: ['bg-cyan-500', 'hover:bg-cyan-600', 'focus:ring-cyan-300'] },
+                    'thermo': { title: 'text-orange-400', btn: ['bg-orange-500', 'hover:bg-orange-600', 'focus:ring-orange-300'] },
+                    'romantic': { title: 'text-pink-400', btn: ['bg-pink-500', 'hover:bg-pink-600', 'focus:ring-pink-300'] }
+                };
+                const oldThemes = Object.values(themes).flatMap(theme => [theme.title, ...theme.btn]);
+                titleEl.classList.remove(...oldThemes.filter(c => c.startsWith('text-')));
+                startBtn.classList.remove(...oldThemes.filter(c => !c.startsWith('text-')));
+                
+                titleEl.classList.add(theme.title);
+                startBtn.classList.add(...theme.btn);
+            }
+
+            function resetSimulation() {
+                currentState = SIM_STATE.IDLE;
+                t_pop = t_cool = t_heart = 0;
+                points_pop = []; points_cool = []; points_heart = [];
+                messageEl.classList.remove('visible');
+                changeTheme(themes.serious);
+                startBtn.innerText = 'Iniciar Simulación';
+                startBtn.disabled = false;
+                p.windowResized();
+            }
+
+            const themes = {
+                serious: { title: 'text-cyan-400', btn: ['bg-cyan-500', 'hover:bg-cyan-600', 'focus:ring-cyan-300'] },
+                thermo: { title: 'text-orange-400', btn: ['bg-orange-500', 'hover:bg-orange-600', 'focus:ring-orange-300'] },
+                romantic: { title: 'text-pink-400', btn: ['bg-pink-500', 'hover:bg-pink-600', 'focus:ring-pink-300'] }
+            };
+
+            p.setup = function() {
+                const container = document.getElementById('canvas-container');
+                let canvas = p.createCanvas(container.clientWidth, container.clientHeight);
+                canvas.parent('canvas-container');
+                
+                startBtn.addEventListener('click', () => {
+                    switch(currentState) {
+                        case SIM_STATE.IDLE:
+                        case SIM_STATE.FINISHED:
+                            resetSimulation();
+                            currentState = SIM_STATE.PHASE_1_POP;
+                            startBtn.innerText = 'Simulando Fase 1...';
+                            startBtn.disabled = true;
+                            break;
+                        case SIM_STATE.PHASE_1_DONE:
+                            currentState = SIM_STATE.PHASE_2_COOL;
+                            changeTheme(themes.thermo);
+                            startBtn.innerText = 'Simulando Fase 2...';
+                            startBtn.disabled = true;
+                            break;
+                        case SIM_STATE.PHASE_2_DONE:
+                            currentState = SIM_STATE.PHASE_3_HEART;
+                            changeTheme(themes.romantic);
+                            startBtn.innerText = 'Simulando Fase Final...';
+                            startBtn.disabled = true;
+                            break;
+                    }
+                });
+                p.windowResized();
+            };
+            
+            p.windowResized = function() {
+                const container = document.getElementById('canvas-container');
+                p.resizeCanvas(container.clientWidth, container.clientHeight);
+                scale_heart = p.width * 0.04;
+                p.background(15, 23, 42);
+                if (currentState === SIM_STATE.IDLE) drawAxes("Tiempo", "Población");
+            };
+
+            p.draw = function() {
+                p.background(15, 23, 42);
+
+                switch(currentState) {
+                    case SIM_STATE.PHASE_1_POP:
+                        subtitleEl.innerText = "Fase 1: Modelo de crecimiento poblacional logístico.";
+                        drawAxes("Tiempo", "Población");
+                        let K = p.height * 0.8, P0 = 10, r = 1, A = (K - P0) / P0;
+                        let x_map_pop = p.map(t_pop, 0, t_pop_max, p.width * 0.1, p.width * 0.9);
+                        let y_val_pop = K / (1 + A * p.exp(-r * t_pop));
+                        let y_map_pop = p.map(y_val_pop, 0, K, p.height * 0.9, p.height * 0.1);
+                        points_pop.push(p.createVector(x_map_pop, y_map_pop));
+                        t_pop += pop_speed;
+                        if (t_pop > t_pop_max) {
+                            currentState = SIM_STATE.PHASE_1_DONE;
+                            startBtn.innerText = 'Continuar a Fase 2';
+                            startBtn.disabled = false;
+                        }
+                        drawCurve(points_pop, [59, 130, 246]);
+                        break;
+                    
+                    case SIM_STATE.PHASE_1_DONE:
+                        subtitleEl.innerText = "La primera fase del modelo está completa.";
+                        drawAxes("Tiempo", "Población");
+                        drawCurve(points_pop, [59, 130, 246]);
+                        break;
+
+                    case SIM_STATE.PHASE_2_COOL:
+                        subtitleEl.innerText = "Fase 2: Ley de Enfriamiento de Newton.";
+                        drawAxes("Tiempo", "Temperatura (°C)");
+                        let T_env = 25, T0 = 100, k = 0.5;
+                        let x_map_cool = p.map(t_cool, 0, t_cool_max, p.width * 0.1, p.width * 0.9);
+                        let y_val_cool = T_env + (T0 - T_env) * p.exp(-k * t_cool);
+                        let y_map_cool = p.map(y_val_cool, T0, T_env - 5, p.height * 0.1, p.height * 0.9);
+                        points_cool.push(p.createVector(x_map_cool, y_map_cool));
+                        t_cool += cool_speed;
+                        if (t_cool > t_cool_max) {
+                            currentState = SIM_STATE.PHASE_2_DONE;
+                            startBtn.innerText = 'Revelar Fase Final';
+                            startBtn.disabled = false;
+                        }
+                        drawCurve(points_cool, [251, 146, 60]);
+                        break;
+
+                    case SIM_STATE.PHASE_2_DONE:
+                        subtitleEl.innerText = "La segunda fase del modelo está completa.";
+                        drawAxes("Tiempo", "Temperatura (°C)");
+                        drawCurve(points_cool, [251, 146, 60]);
+                        break;
+                    
+                    case SIM_STATE.PHASE_3_HEART:
+                        subtitleEl.innerText = "Fase Final: Analizando una nueva dinámica de sistema...";
+                        drawAxes("Tiempo (t)", "Amor(t)");
+                        let x_heart = 16 * p.pow(p.sin(t_heart), 3);
+                        let y_heart = -(13 * p.cos(t_heart) - 5 * p.cos(2*t_heart) - 2 * p.cos(3*t_heart) - p.cos(4*t_heart));
+                        points_heart.push(p.createVector(x_heart, y_heart));
+                        t_heart += heart_speed;
+                        if (t_heart > p.TWO_PI) {
+                            currentState = SIM_STATE.FINISHED;
+                            messageEl.classList.add('visible');
+                            startBtn.innerText = 'Reiniciar Simulación';
+                            startBtn.disabled = false;
+                        }
+                        drawHeartCurve(points_heart);
+                        break;
+                    
+                    case SIM_STATE.FINISHED:
+                         subtitleEl.innerText = "Simulación completada.";
+                         drawAxes("Tiempo (t)", "Amor(t)");
+                         drawHeartCurve(points_heart);
+                         break;
+
+                    case SIM_STATE.IDLE:
+                    default:
+                        subtitleEl.innerText = "Modelando un sistema dinámico a lo largo del tiempo.";
+                        drawAxes("Tiempo", "Población");
+                        break;
+                }
+            };
+            
+            function drawCurve(points, color) {
+                p.push(); p.stroke(color[0], color[1], color[2]); p.strokeWeight(3); p.noFill();
+                p.beginShape(); points.forEach(v => p.vertex(v.x, v.y)); p.endShape(); p.pop();
+            }
+
+             function drawHeartCurve(points) {
+                p.push(); p.translate(p.width/2, p.height/2.2); p.stroke(244, 63, 94); p.strokeWeight(3); p.noFill();
+                p.beginShape(); points.forEach(v => p.vertex(v.x * scale_heart * 0.5, v.y * scale_heart * 0.5)); p.endShape(); p.pop();
+            }
+            
+            function drawAxes(xLabel, yLabel) {
+                p.push(); p.stroke(100, 116, 139, 150); p.strokeWeight(1);
+                p.line(p.width * 0.1, p.height * 0.9, p.width * 0.9, p.height * 0.9);
+                p.line(p.width * 0.1, p.height * 0.9, p.width * 0.1, p.height * 0.1);
+                p.fill(100, 116, 139); p.noStroke(); p.textAlign(p.CENTER, p.TOP);
+                p.text(xLabel, p.width / 2, p.height * 0.9 + 10);
+                p.textAlign(p.CENTER, p.BOTTOM); p.push();
+                p.translate(p.width * 0.1 - 25, p.height/2); p.rotate(-p.HALF_PI);
+                p.text(yLabel, 0, 0); p.pop(); p.pop();
+            }
+        };
+
+        new p5(sketch);
+    </script>
+</body>
+</html>
+
